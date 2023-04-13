@@ -1,0 +1,4 @@
+name: Agora Spigot
+version: '${version}'
+main: com.agoramp.agoraspigot.AgoraSpigot
+api-version: 1.16
