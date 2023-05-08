@@ -1,10 +1,17 @@
+import dev.s7a.gradle.minecraft.server.tasks.LaunchMinecraftServerTask
+import groovy.json.JsonSlurper
+
 plugins {
     id 'java'
     id 'com.github.johnrengelman.shadow' version '7.1.2' // Add the Shadow plugin
+    id 'dev.s7a.gradle.minecraft.server' version '2.1.0'
 }
 
 group = 'com.agoramp'
 version = '1.0-SNAPSHOT'
+
+targetCompatibility = 1.8
+sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
@@ -21,7 +28,7 @@ repositories {
 
 dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.16.5-R0.1-SNAPSHOT'
-    shadow 'com.github.lumosoft-co:fulfillment-core-java:9069c47e8b' // Change from compileOnly to implementation
+    shadow 'com.github.lumosoft-co:fulfillment-core-java:9069c47e8b'
 }
 
 def targetJavaVersion = 8
@@ -58,3 +65,32 @@ shadowJar {
 }
 
 build.dependsOn(shadowJar)
+
+tasks.register('testPlugin', LaunchMinecraftServerTask) {
+    dependsOn 'build'
+
+    doFirst {
+        copy {
+            from "$buildDir/libs"
+            into "$buildDir/MinecraftServer/plugins"
+            include "${project.name}-${project.version}.jar"
+            rename { String fileName ->
+                fileName.replace("${project.name}-${project.version}", "${project.name}")
+            }
+        }
+    }
+
+    jarUrl = paper('1.16.5')
+    agreeEula = true
+    jvmArgument = ['-DAGORA-API-URL=http://localhost:4000']
+}
+
+static String paper(String version) {
+    String versionsUrl = "https://papermc.io/api/v2/projects/paper/versions"
+    String versionsJson = new URL("$versionsUrl/$version").text
+    def jsonSlurper = new JsonSlurper()
+    def versionData = jsonSlurper.parseText(versionsJson)
+    def build = versionData.builds.max()
+    return "$versionsUrl/$version/builds/$build/downloads/paper-$version-${build}.jar"
+}
+
