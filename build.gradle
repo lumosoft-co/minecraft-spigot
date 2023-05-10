@@ -28,7 +28,7 @@ repositories {
 
 dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.16.5-R0.1-SNAPSHOT'
-    shadow 'com.github.lumosoft-co:fulfillment-core-java:9069c47e8b'
+    shadow 'com.github.lumosoft-co:fulfillment-core-java:54a63c6e04'
 }
 
 def targetJavaVersion = 8
@@ -62,6 +62,9 @@ shadowJar {
     archiveClassifier.set('')
 
     relocate 'com.google.gson', 'com.agoramp.gson'
+    relocate 'io.netty', 'com.agoramp.netty'
+    relocate 'org.reactivestreams', 'com.agoramp.reactive.streams'
+    relocate 'reactor', 'com.agoramp.reactive'
 }
 
 build.dependsOn(shadowJar)

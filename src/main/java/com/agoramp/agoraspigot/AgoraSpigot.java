@@ -9,8 +9,11 @@ import java.io.IOException;
 
 public final class AgoraSpigot extends JavaPlugin {
 
+    static JavaPlugin INSTANCE;
+
     @Override
     public void onEnable() {
+        INSTANCE = this;
         File config = new File(getDataFolder(), "config.json");
         try {
             AgoraFulfillmentService.INSTANCE.initializeFromFile(config, new SpigotExecutor());
