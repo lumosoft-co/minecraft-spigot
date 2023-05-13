@@ -1,39 +1,32 @@
+fragment Product on Product {
+    id
+    title
+    variables
+    image
+    order
+    restricted(cartId: $cartId)
+    price(cartId: $cartId) {
+        price
+        listPrice
+    }
+    purchaseType
+    description
+}
+
 query Listing($cartId: ID) {
     categories {
         handle
         title
         order
         products {
-            id
-            title
-            variables
-            image
-            order
-            restricted(cartId: $cartId)
-            price(cartId: $cartId) {
-                price
-                listPrice
-            }
-            purchaseType
-            description
+            ...Product
         }
         subcategories {
             handle
             title
             order
             products {
-                id
-                title
-                variables
-                image
-                order
-                restricted(cartId: $cartId)
-                price(cartId: $cartId) {
-                    price
-                    listPrice
-                }
-                purchaseType
-                description
+                ...Product
             }
         }
     }
