@@ -1,0 +1,741 @@
+type BillingInfo {
+  email: String
+
+  zipCode: Int
+}
+
+input BillingInfoInput {
+  acceptsMarketing: Boolean
+
+  email: String
+
+  name: String
+
+  regionCode: String
+
+  ip: String!
+}
+
+"""
+Built-in Boolean
+"""
+scalar Boolean
+
+type Branding {
+  logo: String
+
+  icon: String
+
+  colors: [String!]!
+}
+
+type Cart implements Node {
+  id: ID!
+
+  currency: String!
+
+  items: [CartItem!]!
+
+  identity: Identity!
+
+  updatedAt: DateTime!
+
+  cost: Cost!
+
+  discounts: [Discount!]!
+
+  totalQuantity: Int!
+
+  checkoutURL: String!
+
+  metadata: [Entry!]!
+}
+
+type CartItem implements Node {
+  id: ID!
+
+  product: Product!
+
+  variables: [Variable!]!
+
+  quantity: Int!
+
+  cost: Cost!
+
+  discounts: [String!]!
+}
+
+input CartLineInput {
+  product: ID!
+
+  quantity: Int!
+}
+
+type Category implements Node {
+  id: ID!
+
+  numericalId: Int!
+
+  title: String!
+
+  description: String!
+
+  handle: String!
+
+  image: String
+
+  order: Int
+
+  displayType: DisplayType!
+
+  tags: [String!]!
+
+  parent: Category
+
+  products: [Product!]!
+
+  subcategories: [Category!]!
+}
+
+type Checkout implements Node {
+  id: ID!
+
+  country: String!
+
+  returnURL: String!
+
+  info: BillingInfo!
+
+  cost: Cost!
+
+  taxRequirement: TaxRequirement
+
+  cart: Cart!
+
+  url: String!
+}
+
+type CheckoutStatus {
+  orderExists: Boolean!
+
+  fulfillmentsRemaining: Int!
+}
+
+type Cost {
+  actual: Decimal!
+
+  list: Decimal!
+
+  tax: Decimal
+
+  subscriptions: [SubscriptionPlan!]!
+}
+
+"""
+Represents a valid 3 digit currency code.
+"""
+scalar Currency
+
+"""
+Represents an ISO 8601-encoded date and time string.
+"""
+scalar DateTime
+
+"""
+Represents an arbitrary precision decimal number encoded as a string.
+"""
+scalar Decimal
+
+type Discount {
+  title: String!
+
+  amount: Decimal!
+
+  type: DiscountType!
+}
+
+enum DiscountType {
+  COUPON
+
+  SALE
+}
+
+enum DisplayType {
+  GRID
+
+  LIST
+}
+
+type Entry {
+  key: String!
+
+  value: String!
+}
+
+input EntryInput {
+  key: String!
+
+  value: String!
+}
+
+type GameAccount {
+  uuid: String
+
+  username: String
+}
+
+"""
+Built-in ID
+"""
+scalar ID
+
+type Identity {
+  username: String!
+
+  uuid: String!
+
+  email: String
+}
+
+input IdentityInput {
+  username: String!
+
+  uuid: String!
+
+  email: String
+}
+
+"""
+Built-in Int
+"""
+scalar Int
+
+type Mutation {
+  cartCreate(identity: IdentityInput, lines: [CartLineInput!], discountCodes: [String!], metadata: [EntryInput!], overwrite: Boolean): Cart
+
+  cartSetIdentity(cartId: ID!, identity: IdentityInput!): Cart
+
+  cartLineAdd(cartId: ID!, line: CartLineInput!): Cart
+
+  cartLineRemove(cartId: ID!, line: CartLineInput!): Cart
+
+  cartLineDelete(cartId: ID!, lineId: ID!): Cart
+
+  cartLineUpdate(cartId: ID!, lineId: ID!, quantity: Int!): Cart
+
+  cartDiscountAdd(cartId: ID!, discount: String!): Cart
+
+  cartDiscountRemove(cartId: ID!, discount: String!): Cart
+
+  cartCurrencyUpdate(cartId: ID!, currency: String!): Cart
+
+  cartCheckout(cartId: ID!, country: String!, ip: String!, returnURL: String): Checkout
+
+  checkoutSetInfo(checkoutId: ID!, info: BillingInfoInput!): Checkout
+}
+
+interface Node {
+  id: ID!
+}
+
+type Order implements Node {
+  id: ID!
+
+  date: DateTime
+
+  status: OrderStatus!
+
+  amount: Decimal!
+
+  tax: Decimal!
+
+  returnUrl: String!
+
+  products: [ProductPayment!]!
+
+  appliedCoupons: [String!]
+
+  appliedSales: [String!]
+
+  account: GameAccount
+
+  customer: String
+}
+
+enum OrderStatus {
+  COMPLETE
+
+  REFUND
+
+  CHARGEBACK
+
+  UNKNOWN
+}
+
+type Pricing {
+  price: Decimal!
+
+  listPrice: Decimal!
+
+  subscription: SubscriptionPlan
+}
+
+type Product implements Node {
+  id: ID!
+
+  numericalId: Int!
+
+  title: String!
+
+  description: String!
+
+  handle: String!
+
+  image: String
+
+  order: Int
+
+  tags: [String!]!
+
+  variables: [String!]!
+
+  category: Category!
+
+  price(cartId: ID): Pricing!
+
+  purchaseType: PurchaseType!
+
+  restricted(cartId: ID): Boolean!
+}
+
+type ProductPayment {
+  id: ID!
+
+  amount: Decimal!
+
+  plan: SubscriptionPlan
+
+  product: Product!
+}
+
+enum PurchaseType {
+  ONE_TIME
+
+  SUBSCRIPTION
+}
+
+type Query {
+  shop: Shop!
+
+  products: [Product!]!
+
+  productsByTag(tag: String): [Product!]!
+
+  productByHandle(handle: String): Product
+
+  productByNumerical(handle: Int!): Product
+
+  productByID(id: ID): Product
+
+  topProducts(amount: Int, user: String, cart: ID): [Product!]!
+
+  recommendedProducts(handle: String): [Product!]!
+
+  categories: [Category!]!
+
+  categoriesByParent(parent: String): [Category!]!
+
+  categoriesByTag(tag: String!): [Category!]!
+
+  categoryByHandle(handle: String!): Category
+
+  categoryByID(id: ID!): Category
+
+  cart(id: ID!): Cart
+
+  checkout(id: ID!): Checkout
+
+  checkoutStatus(id: ID!): CheckoutStatus!
+
+  order(id: ID!): Order
+
+  user(user: String): User
+}
+
+type Shop implements Node {
+  id: ID!
+
+  title: String!
+
+  description: String!
+
+  handle: String!
+
+  currency: Currency!
+
+  branding: Branding!
+
+  theme(theme: String): Theme!
+
+  brand: Branding!
+
+  categories: [Category!]!
+
+  url: String!
+}
+
+"""
+Built-in String
+"""
+scalar String
+
+type SubscriptionPlan {
+  initialCost: Decimal!
+
+  recurringCost: Decimal!
+
+  interval: TimeSpecification!
+
+  freeTrial: TimeSpecification
+}
+
+type TaxRequirement {
+  type: String!
+
+  options: [String!]!
+}
+
+type Theme {
+  id: ID!
+
+  title: String!
+
+  type: ThemeType!
+
+  variables: [Entry!]!
+}
+
+enum ThemeType {
+  STATIC
+
+  TWIG
+
+  REMIX
+}
+
+type TimeSpecification {
+  amount: Int!
+
+  unit: TimeUnit!
+}
+
+enum TimeUnit {
+  SECONDS
+
+  MINUTES
+
+  HOURS
+
+  DAYS
+
+  WEEKS
+
+  MONTHS
+
+  YEARS
+}
+
+type User {
+  id: ID!
+
+  name: String!
+}
+
+type Variable {
+  key: String!
+
+  value: String!
+}
+
+type __Directive {
+  """
+  The __Directive type represents a Directive that a server supports.
+  """
+  name: String!
+
+  description: String
+
+  isRepeatable: Boolean!
+
+  locations: [__DirectiveLocation!]!
+
+  args(includeDeprecated: Boolean = false): [__InputValue!]!
+
+  onOperation: Boolean @deprecated(reason: "Use `locations`.")
+
+  onFragment: Boolean @deprecated(reason: "Use `locations`.")
+
+  onField: Boolean @deprecated(reason: "Use `locations`.")
+}
+
+"""
+An enum describing valid locations where a directive can be placed
+"""
+enum __DirectiveLocation {
+  """
+  Indicates the directive is valid on queries.
+  """
+  QUERY
+
+  """
+  Indicates the directive is valid on mutations.
+  """
+  MUTATION
+
+  """
+  Indicates the directive is valid on subscriptions.
+  """
+  SUBSCRIPTION
+
+  """
+  Indicates the directive is valid on fields.
+  """
+  FIELD
+
+  """
+  Indicates the directive is valid on fragment definitions.
+  """
+  FRAGMENT_DEFINITION
+
+  """
+  Indicates the directive is valid on fragment spreads.
+  """
+  FRAGMENT_SPREAD
+
+  """
+  Indicates the directive is valid on inline fragments.
+  """
+  INLINE_FRAGMENT
+
+  """
+  Indicates the directive is valid on variable definitions.
+  """
+  VARIABLE_DEFINITION
+
+  """
+  Indicates the directive is valid on a schema SDL definition.
+  """
+  SCHEMA
+
+  """
+  Indicates the directive is valid on a scalar SDL definition.
+  """
+  SCALAR
+
+  """
+  Indicates the directive is valid on an object SDL definition.
+  """
+  OBJECT
+
+  """
+  Indicates the directive is valid on a field SDL definition.
+  """
+  FIELD_DEFINITION
+
+  """
+  Indicates the directive is valid on a field argument SDL definition.
+  """
+  ARGUMENT_DEFINITION
+
+  """
+  Indicates the directive is valid on an interface SDL definition.
+  """
+  INTERFACE
+
+  """
+  Indicates the directive is valid on an union SDL definition.
+  """
+  UNION
+
+  """
+  Indicates the directive is valid on an enum SDL definition.
+  """
+  ENUM
+
+  """
+  Indicates the directive is valid on an enum value SDL definition.
+  """
+  ENUM_VALUE
+
+  """
+  Indicates the directive is valid on an input object SDL definition.
+  """
+  INPUT_OBJECT
+
+  """
+  Indicates the directive is valid on an input object field SDL definition.
+  """
+  INPUT_FIELD_DEFINITION
+}
+
+type __EnumValue {
+  name: String!
+
+  description: String
+
+  isDeprecated: Boolean!
+
+  deprecationReason: String
+}
+
+type __Field {
+  name: String!
+
+  description: String
+
+  args(includeDeprecated: Boolean = false): [__InputValue!]!
+
+  type: __Type!
+
+  isDeprecated: Boolean!
+
+  deprecationReason: String
+}
+
+type __InputValue {
+  name: String!
+
+  description: String
+
+  type: __Type!
+
+  defaultValue: String
+
+  isDeprecated: Boolean
+
+  deprecationReason: String
+}
+
+"""
+A GraphQL Introspection defines the capabilities of a GraphQL server. It exposes all available types and directives on the server, the entry points for query, mutation, and subscription operations.
+"""
+type __Schema {
+  description: String
+
+  """
+  A list of all types supported by this server.
+  """
+  types: [__Type!]!
+
+  """
+  The type that query operations will be rooted at.
+  """
+  queryType: __Type!
+
+  """
+  If this server supports mutation, the type that mutation operations will be rooted at.
+  """
+  mutationType: __Type
+
+  """
+  'A list of all directives supported by this server.
+  """
+  directives: [__Directive!]!
+
+  """
+  'If this server support subscription, the type that subscription operations will be rooted at.
+  """
+  subscriptionType: __Type
+}
+
+type __Type {
+  kind: __TypeKind!
+
+  name: String
+
+  description: String
+
+  fields(includeDeprecated: Boolean = false): [__Field!]
+
+  interfaces: [__Type!]
+
+  possibleTypes: [__Type!]
+
+  enumValues(includeDeprecated: Boolean = false): [__EnumValue!]
+
+  inputFields(includeDeprecated: Boolean = false): [__InputValue!]
+
+  ofType: __Type
+
+  specifiedByUrl: String
+}
+
+"""
+An enum describing what kind of type a given __Type is
+"""
+enum __TypeKind {
+  """
+  Indicates this type is a scalar. 'specifiedByUrl' is a valid field
+  """
+  SCALAR
+
+  """
+  Indicates this type is an object. `fields` and `interfaces` are valid fields.
+  """
+  OBJECT
+
+  """
+  Indicates this type is an interface. `fields` and `possibleTypes` are valid fields.
+  """
+  INTERFACE
+
+  """
+  Indicates this type is a union. `possibleTypes` is a valid field.
+  """
+  UNION
+
+  """
+  Indicates this type is an enum. `enumValues` is a valid field.
+  """
+  ENUM
+
+  """
+  Indicates this type is an input object. `inputFields` is a valid field.
+  """
+  INPUT_OBJECT
+
+  """
+  Indicates this type is a list. `ofType` is a valid field.
+  """
+  LIST
+
+  """
+  Indicates this type is a non-null. `ofType` is a valid field.
+  """
+  NON_NULL
+}
+
+"""
+Directs the executor to include this field or fragment only when the `if` argument is true
+"""
+directive @include ("Included when true." if: Boolean!) on FIELD|FRAGMENT_SPREAD|INLINE_FRAGMENT
+
+"""
+Directs the executor to skip this field or fragment when the `if` argument is true.
+"""
+directive @skip ("Skipped when true." if: Boolean!) on FIELD|FRAGMENT_SPREAD|INLINE_FRAGMENT
+
+"""
+Marks the field, argument, input field or enum value as deprecated
+"""
+directive @deprecated ("The reason for the deprecation" reason: String = "No longer supported") on FIELD_DEFINITION|ARGUMENT_DEFINITION|ENUM_VALUE|INPUT_FIELD_DEFINITION
+
+"""
+Exposes a URL that specifies the behaviour of this scalar.
+"""
+directive @specifiedBy ("The URL that specifies the behaviour of this scalar." url: String!) on SCALAR
+
+schema {
+  query: Query
+  mutation: Mutation
+}

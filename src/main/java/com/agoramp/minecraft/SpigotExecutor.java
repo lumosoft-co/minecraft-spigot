@@ -1,4 +1,4 @@
-package com.agoramp.agoraspigot;
+package com.agoramp.minecraft;
 
 import com.agoramp.FulfillmentExecutor;
 import com.agoramp.data.models.common.OnlineStatus;
@@ -9,7 +9,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigInteger;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;

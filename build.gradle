@@ -5,6 +5,7 @@ plugins {
     id 'java'
     id 'com.github.johnrengelman.shadow' version '7.1.2' // Add the Shadow plugin
     id 'dev.s7a.gradle.minecraft.server' version '2.1.0'
+    id "com.apollographql.apollo3" version "3.8.1"
 }
 
 group = 'com.agoramp'
@@ -24,11 +25,18 @@ repositories {
         url = 'https://oss.sonatype.org/content/groups/public/'
     }
     maven { url 'https://jitpack.io' }
+    maven { url "https://repo.dmulloy2.net/repository/public/" }
+    mavenLocal()
 }
 
 dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.16.5-R0.1-SNAPSHOT'
-    shadow 'com.github.lumosoft-co:fulfillment-core-java:54a63c6e04'
+    shadow 'com.agoramp:fulfillment-core-java:1.0-SNAPSHOT'
+    shadow 'com.agoramp:minecraft-util:1.0-SNAPSHOT'
+    compileOnly 'com.comphenix.protocol:ProtocolLib:5.0.0'
+
+    implementation 'org.projectlombok:lombok:1.18.26'
+    annotationProcessor 'org.projectlombok:lombok:1.18.26'
 }
 
 def targetJavaVersion = 8
@@ -85,7 +93,7 @@ tasks.register('testPlugin', LaunchMinecraftServerTask) {
 
     jarUrl = paper('1.16.5')
     agreeEula = true
-    jvmArgument = ['-DAGORA-API-URL=http://localhost:4000']
+    //jvmArgument = ['-DAGORA-API-URL=http://localhost:4000']
 }
 
 static String paper(String version) {
@@ -95,5 +103,11 @@ static String paper(String version) {
     def versionData = jsonSlurper.parseText(versionsJson)
     def build = versionData.builds.max()
     return "$versionsUrl/$version/builds/$build/downloads/paper-$version-${build}.jar"
+}
+
+apollo {
+    service("service") {
+        packageName.set("com.agoramp.minecraft.models.graphql")
+    }
 }
 

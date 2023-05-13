@@ -1,0 +1,59 @@
+fragment CartInfo on Cart {
+    id
+    checkoutURL
+    totalQuantity
+    items {
+        id
+        quantity
+        product {
+            id
+            title
+        }
+        cost {
+            actual
+        }
+    }
+}
+
+mutation CartCreate($username: String!, $uuid: String!) {
+    cartCreate(identity: {
+        username: $username
+        uuid: $uuid
+    }) {
+        ...CartInfo
+    }
+}
+
+mutation CartRemoveProduct($cartId: ID!, $product: ID!) {
+    cartLineRemove(
+        cartId: $cartId,
+        line: {
+            product: $product
+            quantity: 1
+        }
+    ) {
+        ...CartInfo
+    }
+}
+
+mutation CartAddProduct($cartId: ID!, $product: ID!) {
+    cartLineAdd(
+        cartId: $cartId,
+        line: {
+            product: $product
+            quantity: 1
+        }
+    ) {
+        ...CartInfo
+    }
+}
+
+mutation CartUpdateProduct($cartId: ID!, $lineId: ID!, $quantity: Int!) {
+    cartLineUpdate(
+        cartId: $cartId,
+        lineId: $lineId,
+        quantity: $quantity
+    ) {
+        ...CartInfo
+    }
+}

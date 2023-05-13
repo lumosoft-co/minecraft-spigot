@@ -1,4 +1,8 @@
 name: Agora
 version: '${version}'
-main: com.agoramp.agoraspigot.AgoraSpigot
+main: com.agoramp.minecraft.AgoraSpigot
 api-version: 1.16
+
+commands:
+  buy:
+    usage: /buy

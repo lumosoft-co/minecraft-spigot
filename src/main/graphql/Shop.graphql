@@ -1,0 +1,11 @@
+query Shop {
+    shop {
+        id
+        title
+        currency
+        branding {
+            logo
+            colors
+        }
+    }
+}
