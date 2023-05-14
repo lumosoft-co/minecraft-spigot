@@ -4,23 +4,21 @@ import com.agoramp.minecraft.util.MinecraftUtil;
 import com.agoramp.minecraft.util.Platform;
 import com.agoramp.minecraft.util.api.text.MiniMessageUtil;
 import com.agoramp.minecraft.util.api.text.Translatable;
-import com.agoramp.minecraft.util.controller.TranslationController;
-import com.agoramp.minecraft.util.data.packets.models.ModelledPacket;
-import com.agoramp.minecraft.util.data.packets.models.ClickWindowPacket;
-import com.agoramp.minecraft.util.data.packets.models.CloseWindowPacket;
-import com.agoramp.minecraft.util.data.packets.models.WindowItemsPacket;
+import com.agoramp.minecraft.util.data.packets.models.*;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.utility.MinecraftFields;
+import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.ComponentLike;
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import com.agoramp.kyori.adventure.text.Component;
+import com.agoramp.kyori.adventure.text.ComponentLike;
+import com.agoramp.kyori.adventure.text.format.NamedTextColor;
+import com.agoramp.kyori.adventure.text.format.TextDecoration;
+import com.agoramp.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import com.agoramp.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -46,17 +44,21 @@ public enum SpigotPlatform implements Platform {
         manager.addPacketListener(new PacketAdapter(AgoraSpigot.INSTANCE, PacketType.Play.Client.WINDOW_CLICK) {
             @Override
             public void onPacketReceiving(PacketEvent event) {
-                PacketContainer packet = event.getPacket();
-                ModelledPacket original = new ClickWindowPacket(
-                        packet.getIntegers().read(0),
-                        packet.getIntegers().read(1),
-                        packet.getIntegers().read(2),
-                        packet.getShorts().read(0),
-                        packet.getItemModifier().read(0),
-                        packet.getEnumModifier(ClickWindowPacket.InventoryClickType.class, 5).read(0)
-                );
-                if (handlePacket(event.getPlayer().getUniqueId(), original)) {
-                    event.setCancelled(true);
+                try {
+                    PacketContainer packet = event.getPacket();
+                    ModelledPacket original = new ClickWindowPacket(
+                            packet.getIntegers().read(0),
+                            packet.getIntegers().read(1),
+                            packet.getIntegers().read(2),
+                            packet.getShorts().read(0),
+                            packet.getItemModifier().read(0),
+                            packet.getEnumModifier(ClickWindowPacket.InventoryClickType.class, 5).read(0)
+                    );
+                    if (handlePacket(event.getPlayer().getUniqueId(), original)) {
+                        event.setCancelled(true);
+                    }
+                } catch (Throwable t) {
+                    t.printStackTrace();
                 }
             }
         });
@@ -64,22 +66,27 @@ public enum SpigotPlatform implements Platform {
 
     @Override
     public void schedule(Runnable runnable, int i) {
-        Bukkit.getScheduler().scheduleSyncDelayedTask(AgoraSpigot.INSTANCE, runnable, i);
+        Bukkit.getScheduler().scheduleSyncDelayedTask(AgoraSpigot.INSTANCE, () -> {
+            try {
+                runnable.run();
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+        }, i);
     }
 
     @Override
     public int openInventory(UUID uuid, int size, ComponentLike componentLike) {
         if (size % 9 != 0) throw new Error("Invalid size");
         Player player = Bukkit.getPlayer(uuid);
-        int windowId = windowCounts.compute(uuid, (k,v) -> v == null ? 124 : v + 1);
         PacketContainer container = new PacketContainer(PacketType.Play.Server.OPEN_WINDOW);
         container.getIntegers()
-                .write(0, windowId)
+                .write(0, 69)
                 .write(1, size / 9 - 1);
         container.getChatComponents()
                         .write(0, serialize(uuid, componentLike));
         manager.sendServerPacket(player, container);
-        return windowId;
+        return 69;
     }
 
     @Override
@@ -104,12 +111,12 @@ public enum SpigotPlatform implements Platform {
                 if (meta != null) {
                     if (metadata.length >= 1 && metadata[0] != null) {
                         ComponentLike name = (ComponentLike) metadata[0];
-                        meta.setDisplayName(serializer.serialize(parse(uuid, name)));
+                        meta.setDisplayName(serializer.serialize(parse(uuid, name).colorIfAbsent(NamedTextColor.WHITE)));
                     }
                     if (metadata.length >= 2 && metadata[1] != null) {
                         ComponentLike lore = (ComponentLike) metadata[1];
                         meta.setLore(MiniMessageUtil
-                                .split(parse(uuid, lore), '\n')
+                                .split(parse(uuid, lore).colorIfAbsent(NamedTextColor.WHITE), '\n')
                                 .stream()
                                 .map(serializer::serialize)
                                 .collect(Collectors.toList()));
@@ -119,6 +126,14 @@ public enum SpigotPlatform implements Platform {
                 stacks.add(stack);
             }
             container.getItemListModifier().write(0, stacks);
+        } else if (modelledPacket instanceof SetSlotPacket) {
+           SetSlotPacket<ItemStack> packet =  (SetSlotPacket<ItemStack>) modelledPacket;
+           container = new PacketContainer(PacketType.Play.Server.SET_SLOT);
+           container.getIntegers()
+                   .write(0, packet.getWindowId())
+                   .write(1, packet.getSlot());
+           container.getItemModifier()
+                   .write(0, packet.getItem() == null ? new ItemStack(Material.AIR) : packet.getItem());
         } else {
             throw new Error("Unhandled packet type " + modelledPacket.getClass().getSimpleName());
         }
@@ -132,9 +147,11 @@ public enum SpigotPlatform implements Platform {
 
     @Override
     public void sendMessage(UUID uuid, ComponentLike componentLike) {
-        PacketContainer container = new PacketContainer(PacketType.Play.Server.SYSTEM_CHAT);
+        PacketContainer container = new PacketContainer(PacketType.Play.Server.CHAT);
         container.getChatComponents()
                 .write(0, serialize(uuid, componentLike));
+        container.getChatTypes()
+                .write(0, EnumWrappers.ChatType.SYSTEM);
         manager.sendServerPacket(Bukkit.getPlayer(uuid), container);
     }
 
@@ -142,7 +159,11 @@ public enum SpigotPlatform implements Platform {
         if (component instanceof Translatable) {
             component = ((Translatable) component).translate(getLocale(id));
         }
-        return component.asComponent();
+        Component out = component.asComponent();
+        if (out.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET) {
+            out = out.decoration(TextDecoration.ITALIC, false);
+        }
+        return out;
     }
 
     private WrappedChatComponent serialize(UUID id, ComponentLike component) {

@@ -1,16 +1,21 @@
 fragment CartInfo on Cart {
     id
-    checkoutURL
     totalQuantity
+    checkoutURL
+    cost {
+        actual
+    }
     items {
         id
         quantity
         product {
             id
             title
+            description
         }
         cost {
             actual
+            list
         }
     }
 }
@@ -55,5 +60,11 @@ mutation CartUpdateProduct($cartId: ID!, $lineId: ID!, $quantity: Int!) {
         quantity: $quantity
     ) {
         ...CartInfo
+    }
+}
+
+mutation CartCheckout($cartId: ID!, $country: String!, $ip: String!) {
+    cartCheckout(cartId: $cartId, country: $country, ip: $ip) {
+        url
     }
 }

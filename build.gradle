@@ -70,10 +70,6 @@ shadowJar {
     archiveClassifier.set('')
 
     exclude 'com/google/*'
-    relocate 'io.netty', 'com.agoramp.netty'
-    relocate 'org.reactivestreams', 'com.agoramp.reactive.streams'
-    relocate 'reactor', 'com.agoramp.reactive'
-    relocate 'net.kyori', 'com.agoramp.kyori'
 }
 
 build.dependsOn(shadowJar)

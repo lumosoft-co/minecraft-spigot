@@ -13,21 +13,20 @@ fragment Product on Product {
     description
 }
 
+fragment Category on Category {
+    handle
+    title
+    order
+    products {
+        ...Product
+    }
+}
+
 query Listing($cartId: ID) {
     categories {
-        handle
-        title
-        order
-        products {
-            ...Product
-        }
+        ...Category
         subcategories {
-            handle
-            title
-            order
-            products {
-                ...Product
-            }
+            ...Category
         }
     }
 }

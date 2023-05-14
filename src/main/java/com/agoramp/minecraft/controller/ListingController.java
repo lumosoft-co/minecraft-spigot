@@ -10,8 +10,8 @@ import com.apollographql.apollo3.api.Optional;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import reactor.core.publisher.Mono;
-import reactor.util.function.Tuple2;
+import com.agoramp.reactive.core.publisher.Mono;
+import com.agoramp.reactive.util.function.Tuple2;
 
 import java.util.List;
 
@@ -39,7 +39,7 @@ public enum ListingController {
 
     public Mono<Tuple2<CartInfo, List<ListingQuery.Category>>> getListing(Player player) {
         return Storefront.INSTANCE
-                .mutate(new CartCreateMutation(player.getName(), player.getUniqueId().toString()))
+                .mutate(new CartCreateMutation(player.getName(), player.getUniqueId().toString().replace("-", "")))
                 .map(d -> d.cartCreate.cartInfo)
                 .zipWhen(c -> Storefront.INSTANCE
                         .query(new ListingQuery(Optional.present(c.id)))
