@@ -1,7 +1,6 @@
 fragment Product on Product {
     id
     title
-    variables
     image
     order
     restricted(cartId: $cartId)

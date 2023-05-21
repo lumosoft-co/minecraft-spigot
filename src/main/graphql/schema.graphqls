@@ -12,8 +12,6 @@ input BillingInfoInput {
   name: String
 
   regionCode: String
-
-  ip: String!
 }
 
 """
@@ -49,6 +47,8 @@ type Cart implements Node {
   checkoutURL: String!
 
   metadata: [Entry!]!
+
+  recommendedProducts(amount: Int!): [Product!]!
 }
 
 type CartItem implements Node {
@@ -69,6 +69,8 @@ input CartLineInput {
   product: ID!
 
   quantity: Int!
+
+  variables: [VariableInput!]
 }
 
 type Category implements Node {
@@ -112,6 +114,8 @@ type Checkout implements Node {
 
   cart: Cart!
 
+  paymentInfo: PaymentInfo!
+
   url: String!
 }
 
@@ -125,6 +129,8 @@ type Cost {
   actual: Decimal!
 
   list: Decimal!
+
+  savings: Decimal!
 
   tax: Decimal
 
@@ -152,6 +158,8 @@ type Discount {
   amount: Decimal!
 
   type: DiscountType!
+
+  end: DateTime
 }
 
 enum DiscountType {
@@ -210,6 +218,20 @@ Built-in Int
 """
 scalar Int
 
+type Module {
+  type: ModuleType!
+
+  metafield(key: String!): String
+
+  metafields: [Entry!]!
+}
+
+enum ModuleType {
+  TOP_CUSTOMER
+
+  RECENT_ORDERS
+}
+
 type Mutation {
   cartCreate(identity: IdentityInput, lines: [CartLineInput!], discountCodes: [String!], metadata: [EntryInput!], overwrite: Boolean): Cart
 
@@ -221,7 +243,7 @@ type Mutation {
 
   cartLineDelete(cartId: ID!, lineId: ID!): Cart
 
-  cartLineUpdate(cartId: ID!, lineId: ID!, quantity: Int!): Cart
+  cartLineUpdate(cartId: ID!, lineId: ID!, quantity: Int!, variables: [VariableInput!]): Cart
 
   cartDiscountAdd(cartId: ID!, discount: String!): Cart
 
@@ -260,6 +282,8 @@ type Order implements Node {
   account: GameAccount
 
   customer: String
+
+  offers: [Product!]!
 }
 
 enum OrderStatus {
@@ -272,12 +296,36 @@ enum OrderStatus {
   UNKNOWN
 }
 
+type PaymentInfo {
+  stripeId: String
+
+  stripeToken: String
+
+  paypalId: String
+
+  paypalOrderId: String
+}
+
+enum Period {
+  HOUR
+
+  DAY
+
+  WEEK
+
+  MONTH
+
+  YEAR
+}
+
 type Pricing {
   price: Decimal!
 
   listPrice: Decimal!
 
   subscription: SubscriptionPlan
+
+  discounts: [Discount!]!
 }
 
 type Product implements Node {
@@ -297,7 +345,7 @@ type Product implements Node {
 
   tags: [String!]!
 
-  variables: [String!]!
+  variables: [ProductVariable!]!
 
   category: Category!
 
@@ -316,6 +364,18 @@ type ProductPayment {
   plan: SubscriptionPlan
 
   product: Product!
+}
+
+type ProductVariable {
+  identifier: String!
+
+  type: VariableType
+
+  description: String!
+
+  options: [VariableOption!]
+
+  restriction: TextRestriction
 }
 
 enum PurchaseType {
@@ -337,10 +397,6 @@ type Query {
 
   productByID(id: ID): Product
 
-  topProducts(amount: Int, user: String, cart: ID): [Product!]!
-
-  recommendedProducts(handle: String): [Product!]!
-
   categories: [Category!]!
 
   categoriesByParent(parent: String): [Category!]!
@@ -360,6 +416,18 @@ type Query {
   order(id: ID!): Order
 
   user(user: String): User
+
+  topProducts(amount: Int, user: String, cart: ID): [Product!]!
+
+  recommendedProducts(handle: String, userId: String): [Product!]!
+
+  recentOrders: [RecentOrder!]!
+
+  topCustomer(period: Period!): GameAccount
+}
+
+type RecentOrder {
+  account: GameAccount!
 }
 
 type Shop implements Node {
@@ -379,7 +447,11 @@ type Shop implements Node {
 
   brand: Branding!
 
+  variables: [ProductVariable!]!
+
   categories: [Category!]!
+
+  modules: [Module!]!
 
   url: String!
 }
@@ -403,6 +475,12 @@ type TaxRequirement {
   type: String!
 
   options: [String!]!
+}
+
+type TextRestriction {
+  maximumLength: Int!
+
+  minimumLength: Int!
 }
 
 type Theme {
@@ -455,6 +533,28 @@ type Variable {
   key: String!
 
   value: String!
+}
+
+input VariableInput {
+  key: String!
+
+  value: String!
+}
+
+type VariableOption {
+  name: String!
+
+  value: String!
+
+  price: Decimal!
+
+  percent: Boolean!
+}
+
+enum VariableType {
+  DROPDOWN
+
+  TEXT
 }
 
 type __Directive {

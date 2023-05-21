@@ -168,7 +168,7 @@ public class ListingUI extends UserInterface<ItemStack> {
         );
 
         // Checkout button
-        setItem(slot(7, 4), new ItemStack(Material.GOLD_BLOCK),
+        setItem(slot(7, 4), new ItemStack(Material.EMERALD_BLOCK),
                 Translation.create("ui.listing.checkout.title"),
                 Translation.create("ui.listing.checkout.description",
                         "quantity", cart == null ? 0 : cart.totalQuantity,
