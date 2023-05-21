@@ -41,20 +41,27 @@ public enum SpigotPlatform implements Platform {
     public void load() {
         manager = ProtocolLibrary.getProtocolManager();
         MinecraftUtil.initialize(this);
-        manager.addPacketListener(new PacketAdapter(AgoraSpigot.INSTANCE, PacketType.Play.Client.WINDOW_CLICK) {
+        manager.addPacketListener(new PacketAdapter(AgoraSpigot.INSTANCE, PacketType.Play.Client.WINDOW_CLICK, PacketType.Play.Client.CLOSE_WINDOW) {
             @Override
             public void onPacketReceiving(PacketEvent event) {
                 try {
                     PacketContainer packet = event.getPacket();
-                    ModelledPacket original = new ClickWindowPacket(
-                            packet.getIntegers().read(0),
-                            packet.getIntegers().read(1),
-                            packet.getIntegers().read(2),
-                            packet.getShorts().read(0),
-                            packet.getItemModifier().read(0),
-                            packet.getEnumModifier(ClickWindowPacket.InventoryClickType.class, 5).read(0)
-                    );
-                    if (handlePacket(event.getPlayer().getUniqueId(), original)) {
+                    ModelledPacket translated;
+                    if (packet.getType() == PacketType.Play.Client.WINDOW_CLICK) {
+                        translated = new ClickWindowPacket(
+                                packet.getIntegers().read(0),
+                                packet.getIntegers().read(1),
+                                packet.getIntegers().read(2),
+                                packet.getShorts().read(0),
+                                packet.getItemModifier().read(0),
+                                packet.getEnumModifier(ClickWindowPacket.InventoryClickType.class, 5).read(0)
+                        );
+                    } else if (packet.getType() == PacketType.Play.Client.CLOSE_WINDOW) {
+                        translated = new CloseWindowPacket(packet.getIntegers().read(0));
+                    } else {
+                        return;
+                    }
+                    if (handlePacket(event.getPlayer().getUniqueId(), translated)) {
                         event.setCancelled(true);
                     }
                 } catch (Throwable t) {
