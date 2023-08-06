@@ -31,7 +31,7 @@ repositories {
 
 dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.16.5-R0.1-SNAPSHOT'
-    shadow 'com.agoramp:fulfillment-core-java:1.0-SNAPSHOT'
+    shadow 'com.github.lumosoft-co:fulfillment-core-java:037e497964'
     shadow 'com.agoramp:minecraft-util:1.0-SNAPSHOT'
     implementation 'com.comphenix.protocol:ProtocolLib:5.0.0'
 

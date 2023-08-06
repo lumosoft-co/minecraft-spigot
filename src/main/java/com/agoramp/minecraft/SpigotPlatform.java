@@ -1,5 +1,6 @@
 package com.agoramp.minecraft;
 
+import com.agoramp.minecraft.commands.BuyCommand;
 import com.agoramp.minecraft.util.MinecraftUtil;
 import com.agoramp.minecraft.util.Platform;
 import com.agoramp.minecraft.util.api.text.MiniMessageUtil;
@@ -41,6 +42,7 @@ public enum SpigotPlatform implements Platform {
     public void load() {
         manager = ProtocolLibrary.getProtocolManager();
         MinecraftUtil.initialize(this);
+        Bukkit.getPluginCommand("agora reload").setExecutor(new BuyCommand());
         manager.addPacketListener(new PacketAdapter(AgoraSpigot.INSTANCE, PacketType.Play.Client.WINDOW_CLICK, PacketType.Play.Client.CLOSE_WINDOW) {
             @Override
             public void onPacketReceiving(PacketEvent event) {

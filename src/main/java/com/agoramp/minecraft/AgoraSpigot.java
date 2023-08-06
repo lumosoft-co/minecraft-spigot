@@ -11,7 +11,7 @@ import java.io.IOException;
 
 public final class AgoraSpigot extends JavaPlugin {
 
-    static JavaPlugin INSTANCE;
+    public static AgoraSpigot INSTANCE;
 
     @Override
     public void onEnable() {
@@ -29,4 +29,18 @@ public final class AgoraSpigot extends JavaPlugin {
         SpigotPlatform.INSTANCE.load();
         ListingController.INSTANCE.load();
     }
+
+    public void reload() {
+        AgoraFulfillmentService.INSTANCE.shutdown();
+        File config = new File(getDataFolder(), "config.json");
+        try {
+            AgoraFulfillmentService.INSTANCE.initializeFromFile(config, new SpigotExecutor());
+        } catch (IOException | ServiceAlreadyInitializedException e) {
+            throw new RuntimeException(e);
+        } catch (Throwable t) {
+            System.out.println("Please enter your Agora destination secret in the config located at " + config);
+            return;
+        }
+    }
+
 }
