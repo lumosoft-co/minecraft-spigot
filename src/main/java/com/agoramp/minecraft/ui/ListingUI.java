@@ -80,7 +80,12 @@ public class ListingUI extends UserInterface<ItemStack> {
     protected void loadItems() {
 
         // Create background
-        ItemStack backgroundItem = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+        ItemStack backgroundItem;
+        try {
+            backgroundItem = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+        } catch (Throwable t) {
+            backgroundItem = new ItemStack(Material.AIR);
+        }
         ComponentLike backgroundName = Component.empty();
         row(1, backgroundItem, backgroundName);
         row(5, backgroundItem, backgroundName);
