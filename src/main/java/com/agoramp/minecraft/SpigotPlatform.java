@@ -12,6 +12,7 @@ import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.utility.MinecraftVersion;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.agoramp.kyori.adventure.text.Component;
@@ -52,9 +53,7 @@ public enum SpigotPlatform implements Platform {
                     if (packet.getType() == PacketType.Play.Client.WINDOW_CLICK) {
                         translated = new ClickWindowPacket(
                                 packet.getIntegers().read(0),
-                                packet.getIntegers().read(1),
-                                packet.getIntegers().read(2),
-                                packet.getShorts().read(0),
+                                packet.getIntegers().read(MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2) ? 2 : 1),
                                 packet.getItemModifier().read(0),
                                 packet.getEnumModifier(ClickWindowPacket.InventoryClickType.class, 5).read(0)
                         );
@@ -110,6 +109,12 @@ public enum SpigotPlatform implements Platform {
             container = new PacketContainer(PacketType.Play.Server.WINDOW_ITEMS);
             container.getIntegers()
                     .write(0, items.getWindowId());
+
+            if (MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2)) {
+                container.getIntegers()
+                        .write(1, 1); // state id
+                container.getItemModifier().write(0, new ItemStack(Material.AIR)); // cursor item
+            }
             List<ItemStack> stacks = new ArrayList<>();
             for (int i = 0; i < items.getItems().length; i++) {
                 Object[] metadata = items.getMetadata()[i];
@@ -138,9 +143,14 @@ public enum SpigotPlatform implements Platform {
         } else if (modelledPacket instanceof SetSlotPacket) {
            SetSlotPacket<ItemStack> packet =  (SetSlotPacket<ItemStack>) modelledPacket;
            container = new PacketContainer(PacketType.Play.Server.SET_SLOT);
-           container.getIntegers()
-                   .write(0, packet.getWindowId())
-                   .write(1, packet.getSlot());
+           container.getIntegers().write(0, packet.getWindowId());
+           if (MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2)) {
+               container.getIntegers()
+                       .write(1, 1) // state id
+                       .write(2, packet.getSlot());
+           } else {
+               container.getIntegers().write(1, packet.getSlot());
+           }
            container.getItemModifier()
                    .write(0, packet.getItem() == null ? new ItemStack(Material.AIR) : packet.getItem());
         } else {
@@ -156,11 +166,20 @@ public enum SpigotPlatform implements Platform {
 
     @Override
     public void sendMessage(UUID uuid, ComponentLike componentLike) {
-        PacketContainer container = new PacketContainer(PacketType.Play.Server.CHAT);
-        container.getChatComponents()
-                .write(0, serialize(uuid, componentLike));
-        container.getChatTypes()
-                .write(0, EnumWrappers.ChatType.SYSTEM);
+        PacketContainer container;
+        try {
+            container = new PacketContainer(PacketType.Play.Server.CHAT);
+            container.getChatComponents()
+                    .write(0, serialize(uuid, componentLike));
+            container.getChatTypes()
+                    .write(0, EnumWrappers.ChatType.SYSTEM);
+        } catch (Throwable t) {
+            container = new PacketContainer(PacketType.Play.Server.SYSTEM_CHAT);
+            container.getChatComponents()
+                    .write(0, serialize(uuid, componentLike));
+            container.getBooleans()
+                    .write(0, false);
+        }
         manager.sendServerPacket(Bukkit.getPlayer(uuid), container);
     }
 
