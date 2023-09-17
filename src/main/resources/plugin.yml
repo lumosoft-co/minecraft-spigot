@@ -1,5 +1,6 @@
 name: Agora
 version: '${version}'
+dependencies: ['ProtocolLib']
 main: com.agoramp.minecraft.AgoraSpigot
 api-version: 1.16
 

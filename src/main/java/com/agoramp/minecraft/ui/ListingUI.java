@@ -3,6 +3,7 @@ package com.agoramp.minecraft.ui;
 import com.agoramp.controller.Storefront;
 import com.agoramp.error.GraphQLError;
 import com.agoramp.kyori.adventure.text.format.NamedTextColor;
+import com.agoramp.minecraft.AgoraSpigot;
 import com.agoramp.minecraft.controller.ListingController;
 import com.agoramp.minecraft.models.graphql.CartAddProductMutation;
 import com.agoramp.minecraft.models.graphql.CartRemoveProductMutation;
@@ -19,6 +20,7 @@ import com.agoramp.kyori.adventure.text.Component;
 import com.agoramp.kyori.adventure.text.ComponentLike;
 import com.agoramp.kyori.adventure.text.event.ClickEvent;
 import com.agoramp.kyori.adventure.text.format.TextDecoration;
+import com.agoramp.reactive.core.publisher.Mono;
 import com.apollographql.apollo3.api.Error;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -61,7 +63,7 @@ public class ListingUI extends UserInterface<ItemStack> {
         super.open(id, render);
         ListingController.INSTANCE
                 .getListing(player)
-                .publishOn(Schedulers.boundedElastic())
+                .publishOn(Schedulers.single())
                 .subscribe(t -> {
                     listing = t.getT2();
                     cart = t.getT1();
@@ -78,7 +80,6 @@ public class ListingUI extends UserInterface<ItemStack> {
 
     @Override
     protected void loadItems() {
-
         // Create background
         ItemStack backgroundItem;
         try {
@@ -146,6 +147,18 @@ public class ListingUI extends UserInterface<ItemStack> {
                         .sum();
                 int slot = constrain(i, 1, 2, 5, 4);
                 if (slot == -1) break;
+                String description = wrap(htmlToPlain(product.description), 80);
+                int lines = 0;
+                char[] charArray = description.toCharArray();
+                for (int j = 0; j < charArray.length; j++) {
+                    char c = charArray[j];
+                    if (c == '\n') {
+                        if (++lines == 15) {
+                            description = description.substring(0, j) + "\n\n See more online";
+                            break;
+                        }
+                    }
+                }
                 setItem(slot,
                         new ItemStack(product.id.equals(action) ? Material.YELLOW_WOOL : Material.GOLD_INGOT, Math.max(1, Math.min(64, cartQuantity))),
                         Translation.create("ui.listing.product.title",
@@ -154,7 +167,7 @@ public class ListingUI extends UserInterface<ItemStack> {
                                 "listPrice", product.price.listPrice
                         ),
                         Translation.create("ui.listing.product.description",
-                                "description", wrap(htmlToPlain(product.description), 80),
+                                "description", description,
                                 "restricted", product.restricted,
                                 "quantity", cartQuantity
                         )
@@ -253,14 +266,16 @@ public class ListingUI extends UserInterface<ItemStack> {
                     action = product;
                     cartFuture.thenAccept(cart -> Storefront.INSTANCE.mutate(new CartAddProductMutation(cart.id, product))
                             .map(d -> d.cartLineAdd.cartInfo)
-                            .publishOn(Schedulers.boundedElastic())
-                            .doOnError(t -> {
+                            .publishOn(Schedulers.single())
+                            .onErrorResume(t -> {
                                 if (t instanceof GraphQLError) {
                                     for (Error error : ((GraphQLError) t).getErrors()) {
                                         MinecraftUtil.PLATFORM.sendMessage(player, Component.text(error.getMessage()).color(NamedTextColor.RED));
                                     }
                                 }
                                 action = null;
+                                AgoraSpigot.INSTANCE.getLogger().severe("Error when adding to cart: " + formatError(t));
+                                return Mono.empty();
                             })
                             .subscribe(next -> {
                                 this.cart = next;
@@ -272,14 +287,16 @@ public class ListingUI extends UserInterface<ItemStack> {
                     action = product;
                     cartFuture.thenAccept(cart -> Storefront.INSTANCE.mutate(new CartRemoveProductMutation(cart.id, product))
                             .map(d -> d.cartLineRemove.cartInfo)
-                            .publishOn(Schedulers.boundedElastic())
-                            .doOnError(t -> {
+                            .publishOn(Schedulers.single())
+                            .onErrorResume(t -> {
                                 if (t instanceof GraphQLError) {
                                     for (Error error : ((GraphQLError) t).getErrors()) {
                                         MinecraftUtil.PLATFORM.sendMessage(player, Component.text(error.getMessage()).color(NamedTextColor.RED));
                                     }
                                 }
+                                AgoraSpigot.INSTANCE.getLogger().severe("Error when removing from cart: " + formatError(t));
                                 action = null;
+                                return Mono.empty();
                             })
                             .subscribe(next -> {
                                 this.cart = next;
@@ -289,6 +306,19 @@ public class ListingUI extends UserInterface<ItemStack> {
                 }
             }
         });
+    }
+
+    private String formatError(Throwable t) {
+        if (t instanceof GraphQLError) {
+            return String.format("\n%s\n\nCaused by: %s",
+                    ((GraphQLError) t).getErrors()
+                    .stream()
+                    .map(Error::toString)
+                    .collect(Collectors.joining("\n")),
+                    ((GraphQLError) t).getOperation()
+            );
+        }
+        return t.getMessage();
     }
 
     private void row(int row, ItemStack item, Object... meta) {

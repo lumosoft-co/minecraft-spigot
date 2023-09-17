@@ -31,9 +31,9 @@ repositories {
 
 dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.16.5-R0.1-SNAPSHOT'
-    shadow 'com.github.lumosoft-co:fulfillment-core-java:037e497964'
+    shadow 'com.agoramp:fulfillment-core-java:1.0-SNAPSHOT'
     shadow 'com.agoramp:minecraft-util:1.0-SNAPSHOT'
-    implementation 'com.comphenix.protocol:ProtocolLib:5.0.0'
+    implementation 'com.comphenix.protocol:ProtocolLib:5.1.0'
 
     implementation 'org.projectlombok:lombok:1.18.26'
     annotationProcessor 'org.projectlombok:lombok:1.18.26'
@@ -88,7 +88,7 @@ tasks.register('testPlugin', LaunchMinecraftServerTask) {
         }
     }
 
-    jarUrl = paper('1.16.5')
+    jarUrl = paper('1.20.1')
     agreeEula = true
     //jvmArgument = ['-DAGORA-API-URL=http://localhost:4000']
 }

@@ -9,6 +9,7 @@ import com.agoramp.minecraft.util.data.packets.models.*;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.InternalStructure;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
@@ -27,6 +28,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -43,7 +45,6 @@ public enum SpigotPlatform implements Platform {
     public void load() {
         manager = ProtocolLibrary.getProtocolManager();
         MinecraftUtil.initialize(this);
-        Bukkit.getPluginCommand("agora reload").setExecutor(new BuyCommand());
         manager.addPacketListener(new PacketAdapter(AgoraSpigot.INSTANCE, PacketType.Play.Client.WINDOW_CLICK, PacketType.Play.Client.CLOSE_WINDOW) {
             @Override
             public void onPacketReceiving(PacketEvent event) {
@@ -51,11 +52,15 @@ public enum SpigotPlatform implements Platform {
                     PacketContainer packet = event.getPacket();
                     ModelledPacket translated;
                     if (packet.getType() == PacketType.Play.Client.WINDOW_CLICK) {
+                        int button = MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2) ?
+                                packet.getIntegers().read(3) :
+                                packet.getShorts().read(0);
                         translated = new ClickWindowPacket(
                                 packet.getIntegers().read(0),
                                 packet.getIntegers().read(MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2) ? 2 : 1),
+                                button,
                                 packet.getItemModifier().read(0),
-                                packet.getEnumModifier(ClickWindowPacket.InventoryClickType.class, 5).read(0)
+                                packet.getEnumModifier(ClickWindowPacket.InventoryClickType.class, MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2) ? 4 : 5).read(0)
                         );
                     } else if (packet.getType() == PacketType.Play.Client.CLOSE_WINDOW) {
                         translated = new CloseWindowPacket(packet.getIntegers().read(0));
@@ -88,9 +93,19 @@ public enum SpigotPlatform implements Platform {
         if (size % 9 != 0) throw new Error("Invalid size");
         Player player = Bukkit.getPlayer(uuid);
         PacketContainer container = new PacketContainer(PacketType.Play.Server.OPEN_WINDOW);
-        container.getIntegers()
-                .write(0, 69)
-                .write(1, size / 9 - 1);
+        container.getIntegers().write(0, 69);
+        if (!MinecraftVersion.WILD_UPDATE.atOrAbove()) {
+            container.getIntegers().write(1, size / 9 - 1);
+        } else {
+            Field field = container.getHandle().getClass().getDeclaredFields()[1];
+            Field menuType = field.getType().getDeclaredFields()[(size / 9 - 1)];
+            try {
+                container.getStructures()
+                        .write(0, InternalStructure.getConverter().getSpecific(menuType.get(null)));
+            } catch (Throwable t) {
+                throw new Error("Unsupported version of Minecraft");
+            }
+        }
         container.getChatComponents()
                         .write(0, serialize(uuid, componentLike));
         manager.sendServerPacket(player, container);
@@ -109,7 +124,6 @@ public enum SpigotPlatform implements Platform {
             container = new PacketContainer(PacketType.Play.Server.WINDOW_ITEMS);
             container.getIntegers()
                     .write(0, items.getWindowId());
-
             if (MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2)) {
                 container.getIntegers()
                         .write(1, 1); // state id
@@ -166,21 +180,26 @@ public enum SpigotPlatform implements Platform {
 
     @Override
     public void sendMessage(UUID uuid, ComponentLike componentLike) {
-        PacketContainer container;
         try {
-            container = new PacketContainer(PacketType.Play.Server.CHAT);
-            container.getChatComponents()
-                    .write(0, serialize(uuid, componentLike));
-            container.getChatTypes()
-                    .write(0, EnumWrappers.ChatType.SYSTEM);
+            PacketContainer container;
+            if (MinecraftVersion.WILD_UPDATE.atOrAbove()) {
+                container = new PacketContainer(PacketType.Play.Server.SYSTEM_CHAT);
+                container.getChatComponents()
+                        .write(0, serialize(uuid, componentLike));
+                container.getBooleans()
+                        .write(0, false);
+            } else {
+                container = new PacketContainer(PacketType.Play.Server.CHAT);
+                container.getChatComponents()
+                        .write(0, serialize(uuid, componentLike));
+                container.getChatTypes()
+                        .write(0, EnumWrappers.ChatType.SYSTEM);
+            }
+            manager.sendServerPacket(Bukkit.getPlayer(uuid), container);
         } catch (Throwable t) {
-            container = new PacketContainer(PacketType.Play.Server.SYSTEM_CHAT);
-            container.getChatComponents()
-                    .write(0, serialize(uuid, componentLike));
-            container.getBooleans()
-                    .write(0, false);
+            // unsupported in this version
+            Bukkit.getPlayer(uuid).sendMessage(LegacyComponentSerializer.legacySection().serialize(componentLike.asComponent()));
         }
-        manager.sendServerPacket(Bukkit.getPlayer(uuid), container);
     }
 
     private Component parse(UUID id, ComponentLike component) {
