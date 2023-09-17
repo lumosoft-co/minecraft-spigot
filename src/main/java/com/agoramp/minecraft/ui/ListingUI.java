@@ -160,7 +160,7 @@ public class ListingUI extends UserInterface<ItemStack> {
                     }
                 }
                 setItem(slot,
-                        new ItemStack(product.id.equals(action) ? Material.YELLOW_WOOL : Material.GOLD_INGOT, Math.max(1, Math.min(64, cartQuantity))),
+                        new ItemStack(product.id.equals(action) ? Material.COMPASS : cartQuantity > 0 ? Material.GOLD_INGOT : Material.IRON_INGOT, Math.max(1, Math.min(64, cartQuantity))),
                         Translation.create("ui.listing.product.title",
                                 "title", product.title,
                                 "price", product.price.price,

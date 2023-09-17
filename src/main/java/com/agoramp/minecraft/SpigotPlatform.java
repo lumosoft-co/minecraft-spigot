@@ -52,15 +52,23 @@ public enum SpigotPlatform implements Platform {
                     PacketContainer packet = event.getPacket();
                     ModelledPacket translated;
                     if (packet.getType() == PacketType.Play.Client.WINDOW_CLICK) {
-                        int button = MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2) ?
-                                packet.getIntegers().read(3) :
-                                packet.getShorts().read(0);
+                        int button;
+                        ClickWindowPacket.InventoryClickType type;
+                        if (MinecraftVersion.COMBAT_UPDATE.atOrAbove()) {
+                            type = packet.getEnumModifier(ClickWindowPacket.InventoryClickType.class, MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2) ? 4 : 5).read(0);
+                            button = MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2) ?
+                                    packet.getIntegers().read(3) :
+                                    packet.getShorts().read(0);
+                        } else {
+                            type = ClickWindowPacket.InventoryClickType.values()[packet.getIntegers().read(3)];
+                            button = packet.getIntegers().read(2);
+                        }
                         translated = new ClickWindowPacket(
                                 packet.getIntegers().read(0),
                                 packet.getIntegers().read(MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2) ? 2 : 1),
                                 button,
                                 packet.getItemModifier().read(0),
-                                packet.getEnumModifier(ClickWindowPacket.InventoryClickType.class, MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2) ? 4 : 5).read(0)
+                                type
                         );
                     } else if (packet.getType() == PacketType.Play.Client.CLOSE_WINDOW) {
                         translated = new CloseWindowPacket(packet.getIntegers().read(0));
@@ -94,7 +102,10 @@ public enum SpigotPlatform implements Platform {
         Player player = Bukkit.getPlayer(uuid);
         PacketContainer container = new PacketContainer(PacketType.Play.Server.OPEN_WINDOW);
         container.getIntegers().write(0, 69);
-        if (!MinecraftVersion.WILD_UPDATE.atOrAbove()) {
+        if (!MinecraftVersion.VILLAGE_UPDATE.atOrAbove()) {
+            container.getStrings().write(0, "minecraft:generic_9x" + (size / 9));
+            container.getIntegers().write(1, size);
+        } else if (!MinecraftVersion.WILD_UPDATE.atOrAbove()) {
             container.getIntegers().write(1, size / 9 - 1);
         } else {
             Field field = container.getHandle().getClass().getDeclaredFields()[1];
@@ -122,8 +133,7 @@ public enum SpigotPlatform implements Platform {
         } else if (modelledPacket instanceof WindowItemsPacket) {
             WindowItemsPacket<ItemStack> items = (WindowItemsPacket<ItemStack>) modelledPacket;
             container = new PacketContainer(PacketType.Play.Server.WINDOW_ITEMS);
-            container.getIntegers()
-                    .write(0, items.getWindowId());
+            container.getIntegers().write(0, items.getWindowId());
             if (MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.CAVES_CLIFFS_2)) {
                 container.getIntegers()
                         .write(1, 1); // state id
@@ -153,7 +163,10 @@ public enum SpigotPlatform implements Platform {
                 }
                 stacks.add(stack);
             }
-            container.getItemListModifier().write(0, stacks);
+            if (MinecraftVersion.EXPLORATION_UPDATE.atOrAbove())
+                container.getItemListModifier().write(0, stacks);
+            else
+                container.getItemArrayModifier().write(0, stacks.toArray(new ItemStack[0]));
         } else if (modelledPacket instanceof SetSlotPacket) {
            SetSlotPacket<ItemStack> packet =  (SetSlotPacket<ItemStack>) modelledPacket;
            container = new PacketContainer(PacketType.Play.Server.SET_SLOT);
@@ -175,7 +188,11 @@ public enum SpigotPlatform implements Platform {
 
     @Override
     public Locale getLocale(UUID uuid) {
-        return Locale.forLanguageTag(Bukkit.getPlayer(uuid).getLocale());
+        try {
+            return Locale.forLanguageTag(Bukkit.getPlayer(uuid).getLocale());
+        } catch (Throwable t) {
+            return Locale.ENGLISH;
+        }
     }
 
     @Override

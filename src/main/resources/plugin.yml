@@ -7,3 +7,6 @@ api-version: 1.16
 commands:
   buy:
     usage: /buy
+  agora:
+    usage: /agora secret <secret>
+    description: Bind this server to your Agora store, you can get your secret from the destinations page on the contorl panel
